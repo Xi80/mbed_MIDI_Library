@@ -26,7 +26,7 @@ int noteOn(int ch,int note,int vel){
 int main(void){
     MIDI.setCallbackNoteOn(noteOn);
     while(1){
-        MIDI.parse();
+        MIDI.midiParse();
     }
 }
 ```
@@ -121,7 +121,7 @@ int main() {
   MIDI.setCallbackReset(reset);
     
   while(1){
-      MIDI.parse();
+      MIDI.midiParse();
   }
 }
 ```
