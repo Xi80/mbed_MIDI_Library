@@ -25,9 +25,6 @@ int noteOn(int ch,int note,int vel){
 }
 int main(void){
     MIDI.setCallbackNoteOn(noteOn);
-    while(1){
-        MIDI.parse();
-    }
 }
 ```
 
@@ -63,7 +60,9 @@ GMシステムオン、XGシステムオン、GSリセットすべてに対応�
 
 ランニングステータスルールには対応しているので現状でも使い物にはなります。
 
-割り込み機能は使っていないのでwhileループに余計なものを書くとリアルタイム性が失われます。
+~~割り込み機能は使っていないのでwhileループに余計なものを書くとリアルタイム性が失われます。~~
+
+-->割り込みに対応しました。
 
 
 
@@ -115,9 +114,6 @@ int main() {
   MIDI.setCallbackControlChange(controlChange);
   MIDI.setCallbackProgramChange(programChange);
   MIDI.setCallbackReset(reset);
-  while(1) {
-    MIDI.parse();
-  }
 }
 ```
 

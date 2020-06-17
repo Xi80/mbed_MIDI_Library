@@ -68,8 +68,6 @@ class midi{
          * @param void
          * @return void
          */
-        void parse(void);
-
     private:
 
         Serial serial;

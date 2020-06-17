@@ -14,19 +14,13 @@ midi::midi(PinName tx,PinName rx) : serial(tx,rx){
     programChangeFunc = NULL;
     resetFunc = NULL;
     buffer.clear();
+    serial.attach(this,&midi::getData,Serial::RxIrq);
 }
 
 void midi::getData(void){
     uint8_t data = serial.getc();
     buffer.push_back(data);
     midiParse();
-}
-
-void midi::parse(void){
-    if(serial.readable()){
-        getData();
-        midiParse();
-    }
 }
 
 void midi::setCallbackNoteOn(void (*func)(int,int,int)){
@@ -104,6 +98,7 @@ void midi::decodeCommand(void){
             } else {
                 if(noteOffFunc != NULL)noteOffFunc(runningStatusChannel,secondByte);
             }
+            
             break;
         case noteOff:
             if(noteOffFunc != NULL)noteOffFunc(runningStatusChannel,secondByte);
