@@ -25,6 +25,9 @@ int noteOn(int ch,int note,int vel){
 }
 int main(void){
     MIDI.setCallbackNoteOn(noteOn);
+    while(1){
+        MIDI.parse();
+    }
 }
 ```
 
@@ -36,17 +39,19 @@ USBシリアルではなくMIDIケーブルで受信する場合はmidi.hの#def
 
 ```cpp
 void setCallbackNoteOn(void (*func)(int,int,int));
-        
+
 void setCallbackNoteOff(void (*func)(int,int));
-        
+
 void setCallbackControlChange(void (*func)(int,int,int));
 
 void setCallbackProgramChange(void (*func)(int,int));
-        
+
 void setCallbackReset(void (*func)(void));
+
+void setCallbackPitchBend(void (*func)(int,unsigned short));
 ```
 
-
+コードを見ればわかります。
 
 ### リセットについて
 
@@ -114,6 +119,10 @@ int main() {
   MIDI.setCallbackControlChange(controlChange);
   MIDI.setCallbackProgramChange(programChange);
   MIDI.setCallbackReset(reset);
+    
+  while(1){
+      MIDI.parse();
+  }
 }
 ```
 

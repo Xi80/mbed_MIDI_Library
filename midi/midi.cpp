@@ -20,7 +20,6 @@ midi::midi(PinName tx,PinName rx) : serial(tx,rx){
 void midi::getData(void){
     uint8_t data = serial.getc();
     buffer.push_back(data);
-    midiParse();
 }
 
 void midi::setCallbackNoteOn(void (*func)(int,int,int)){
@@ -42,6 +41,11 @@ void midi::setCallbackProgramChange(void (*func)(int,int)){
 void midi::setCallbackReset(void (*func)(void)){
     resetFunc = func;
 }
+
+void midi::setCallbackPitchBend(void (*func)(int,unsigned short)){
+    pitchBendFunc = func;
+}
+
 
 
 void midi::midiParse(void){
@@ -98,7 +102,6 @@ void midi::decodeCommand(void){
             } else {
                 if(noteOffFunc != NULL)noteOffFunc(runningStatusChannel,secondByte);
             }
-            
             break;
         case noteOff:
             if(noteOffFunc != NULL)noteOffFunc(runningStatusChannel,secondByte);
@@ -109,36 +112,32 @@ void midi::decodeCommand(void){
         case programChange:
             if(programChangeFunc != NULL)programChangeFunc(runningStatusChannel,secondByte);
             break;
+        case pitchBend:
+            if(pitchBendFunc != NULL)pitchBendFunc(runningStatusChannel,(unsigned short)(thirdByte << 7 | secondByte));
+            break;
     }
 }
 
 void midi::decodeSysEx(void){
-    if(decodeResets() == 0){
-        //other commands
-    } else {
-        if(resetFunc != NULL)resetFunc();
-    }
+    if(decodeResets() == 1 && resetFunc != NULL)resetFunc();
 }
 
 uint8_t midi::decodeResets(void){
     uint8_t tmp = 0x00;
-
     if(sysExBuffer.size() == 4){
         for(int i = 0;i < 4;i++){
             tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i])return 0;
+            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
         }
-    }
-    if(sysExBuffer.size() == 7){
+    } else if(sysExBuffer.size() == 7){
         for(int i = 0;i < 7;i++){
             tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i])return 0;
+            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
         }
-    }
-    if(sysExBuffer.size() == 9){
+    } else if(sysExBuffer.size() == 9){
         for(int i = 0;i < 9;i++){
             tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i])return 0;
+            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
         }
     }
     sysExBuffer.clear();
