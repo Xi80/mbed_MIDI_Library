@@ -13,28 +13,35 @@ midi::midi(PinName tx,PinName rx) : serial(tx,rx){
     controlChangeFunc = NULL;
     programChangeFunc = NULL;
     resetFunc = NULL;
+    sysExFunc = NULL;
     buffer.clear();
     serial.attach(this,&midi::getData,Serial::RxIrq);
 }
 
+void midi::init(void){
+    buffer.clear();
+    sysExBufferPos = 0;
+}
+
 void midi::getData(void){
     uint8_t data = serial.getc();
+    if(buffer.size() >= 1023)buffer.clear();
     buffer.push_back(data);
 }
 
-void midi::setCallbackNoteOn(void (*func)(int,int,int)){
+void midi::setCallbackNoteOn(void (*func)(uint8_t,uint8_t,uint8_t)){
     noteOnFunc = func;
 }
 
-void midi::setCallbackNoteOff(void (*func)(int,int)){
+void midi::setCallbackNoteOff(void (*func)(uint8_t,uint8_t)){
     noteOffFunc = func;
 }
 
-void midi::setCallbackControlChange(void (*func)(int,int,int)){
+void midi::setCallbackControlChange(void (*func)(uint8_t,uint8_t,uint8_t)){
     controlChangeFunc = func;
 }
 
-void midi::setCallbackProgramChange(void (*func)(int,int)){
+void midi::setCallbackProgramChange(void (*func)(uint8_t,uint8_t)){
     programChangeFunc = func;
 }
 
@@ -42,11 +49,13 @@ void midi::setCallbackReset(void (*func)(void)){
     resetFunc = func;
 }
 
-void midi::setCallbackPitchBend(void (*func)(int,unsigned short)){
+void midi::setCallbackPitchBend(void (*func)(uint8_t,unsigned short)){
     pitchBendFunc = func;
 }
 
-
+void midi::setCallbackSystemExclusive(void (*func)(uint8_t*,uint8_t)){
+    sysExFunc = func;
+}
 
 void midi::midiParse(void){
     if(!buffer.size())return;
@@ -56,10 +65,13 @@ void midi::midiParse(void){
             isSysEx = false;
             decodeSysEx();
         } else {
-            sysExBuffer.push_back(decodeByte);
+            if(sysExBufferPos > 127)sysExBufferPos = 0;
+            if(decodeByte == 0xFE)return;
+            sysExBuffer[sysExBufferPos++] = decodeByte;
         }
     } else {
         if(decodeByte == beginSysEx){
+            sysExBufferPos = 0;
             isSysEx = true;
         } else {
             if(decodeByte >> 7){
@@ -119,27 +131,16 @@ void midi::decodeCommand(void){
 }
 
 void midi::decodeSysEx(void){
-    if(decodeResets() == 1 && resetFunc != NULL)resetFunc();
-}
-
-uint8_t midi::decodeResets(void){
-    uint8_t tmp = 0x00;
-    if(sysExBuffer.size() == 4){
+    if(sysExBufferPos == 4){
         for(int i = 0;i < 4;i++){
-            tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
+            if(sysExBuffer[i] != gmSystemOn[i]){
+                if(sysExFunc != NULL)sysExFunc(sysExBuffer,sysExBufferPos);
+            }
         }
-    } else if(sysExBuffer.size() == 7){
-        for(int i = 0;i < 7;i++){
-            tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
-        }
-    } else if(sysExBuffer.size() == 9){
-        for(int i = 0;i < 9;i++){
-            tmp = sysExBuffer.pull();
-            if(tmp != gmSystemOn[i]){sysExBuffer.clear();return 0;}
-        }
+        if(resetFunc != NULL)resetFunc();
+    } else {
+        if(sysExFunc != NULL)sysExFunc(sysExBuffer,sysExBufferPos);
     }
-    sysExBuffer.clear();
-    return 1;
+    sysExBufferPos = 0;
+    return;
 }
